@@ -1,0 +1,217 @@
+package dfp.axis.v201711.lineitemservice;
+
+import com.beust.jcommander.Parameter;
+import com.google.api.ads.common.lib.auth.OfflineCredentials;
+import com.google.api.ads.common.lib.auth.OfflineCredentials.Api;
+import com.google.api.ads.common.lib.utils.examples.CodeSampleParams;
+import com.google.api.ads.dfp.axis.factory.DfpServices;
+import com.google.api.ads.dfp.axis.utils.v201711.DateTimes;
+import com.google.api.ads.dfp.axis.v201711.*;
+import com.google.api.ads.dfp.lib.client.DfpSession;
+import com.google.api.ads.dfp.lib.utils.examples.ArgumentNames;
+import com.google.api.client.auth.oauth2.Credential;
+
+import java.lang.annotation.Target;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+import dfp.axis.v201705.customtargetingservice.CreateCustomTargetingKeysAndValues;
+import org.joda.time.Duration;
+import org.joda.time.Instant;
+
+/**
+ * This example creates a new line item that targets the whole network, in
+ * addition to other targeting criteria. To determine which line items exist,
+ * run GetAllLineItems.java. To determine which orders exist, run
+ * GetAllOrders.java. To determine criteria IDs, run GetGeoTargets.java.
+ *
+ * Credentials and properties in {@code fromFile()} are pulled from the
+ * "ads.properties" file. See README for more info.
+ */
+public class CreateLineItems {
+
+  public static List<Long> valuesList = new ArrayList<>();
+
+  private static class CreateLineItemsParams extends CodeSampleParams {
+    @Parameter(names = ArgumentNames.ORDER_ID, required = true,
+        description = "The ID of the order that the line items will belong to.")
+    private Long orderId;
+  }
+
+  public static void runExample(DfpServices dfpServices, DfpSession session, long orderId, int lineItemsSize)
+      throws Exception {
+    // Get the LineItemService.
+
+    LineItemServiceInterface lineItemService =
+        dfpServices.get(session, LineItemServiceInterface.class);
+
+    // Get the NetworkService.
+    NetworkServiceInterface networkService =
+        dfpServices.get(session, NetworkServiceInterface.class);
+
+    // Get the root ad unit ID used to target the whole site.
+    String rootAdUnitId = networkService.getCurrentNetwork().getEffectiveRootAdUnitId();
+
+    // Create inventory targeting.
+    InventoryTargeting inventoryTargeting = new InventoryTargeting();
+
+    // Create ad unit targeting for the root ad unit (i.e. the whole network).
+    //AdUnitTargeting adUnitTargeting = new AdUnitTargeting();
+    //adUnitTargeting.setAdUnitId("null");
+    //adUnitTargeting.setAdUnitId("AD UNIT ID");
+    //adUnitTargeting.setIncludeDescendants(true);
+
+    //inventoryTargeting.setTargetedAdUnits(new AdUnitTargeting[] {adUnitTargeting});
+    inventoryTargeting.setTargetedPlacementIds(new long[]{Placement IDl});
+
+    //static key value targeting
+    CustomCriteria customCriteria = new CustomCriteria();
+    customCriteria.setKeyId(KEYIDL);//L indicates Long format
+    customCriteria.setOperator(CustomCriteriaComparisonOperator.IS_NOT);
+    customCriteria.setValueIds(new long[]{VALUEIDL});//L indicates Long format
+
+    LineItem[] lineItemsList = new LineItem[lineItemsSize];
+
+    long price = 100000L, increment = 50000;//L indicates Long format
+    double displayPrice = 0.10, incDisplay = 0.05;
+
+   for ( int i = 0; i < lineItemsSize; i++)
+   {
+     //dynamic key value targeting
+      CustomCriteria customCriteria2 =new CustomCriteria();
+      customCriteria2.setKeyId(KEYIDL);//L indicates Long format
+      customCriteria2.setOperator(CustomCriteriaComparisonOperator.IS);
+      customCriteria2.setValueIds(new long[] {valuesList.get(i)});
+      System.out.println("Value assigned is " + valuesList.get(i));
+
+     CustomCriteriaSet customCriteriaSet = new CustomCriteriaSet();
+     customCriteriaSet.setChildren(new CustomCriteria[]{customCriteria2,customCriteria});
+     customCriteriaSet.setLogicalOperator(CustomCriteriaSetLogicalOperator.AND);
+
+     //setting this targeting for CreativeTargeting
+     CustomCriteria customCriteria3 = new CustomCriteria();
+     customCriteria3.setKeyId(KEYIDL);//L indicates Long format
+     customCriteria3.setOperator(CustomCriteriaComparisonOperator.IS);
+     customCriteria3.setValueIds(new long[]{VALUEIDL});//L indicates Long format
+     
+     CustomCriteriaSet customCriteriaSet1 = new CustomCriteriaSet();
+     customCriteriaSet1.setChildren(new CustomCriteria[]{customCriteria3});
+     customCriteriaSet1.setLogicalOperator(CustomCriteriaSetLogicalOperator.AND);
+     Targeting targeting1 = new Targeting();
+     targeting1.setCustomTargeting(customCriteriaSet1);
+
+     Creative Targeting
+     CreativeTargeting creativeTargeting = new CreativeTargeting();
+     creativeTargeting.setName("Test_KeyValue");
+     creativeTargeting.setTargeting(targeting1);
+     
+
+    //Create Targeting
+     Targeting targeting = new Targeting();
+     targeting.setInventoryTargeting(inventoryTargeting);
+     targeting.setCustomTargeting(customCriteriaSet);
+
+     //Create a Line Item
+     LineItem lineItem = new LineItem();
+     //lineItem.setName("pb_bidder_" + String.format("%1.2f", displayPrice));
+     lineItem.setName("TestLine" + String.format("%1.2f", displayPrice));
+     lineItem.setOrderId(orderId);
+     lineItem.setTargeting(targeting);
+     lineItem.setCreativeTargetings(0,creativeTargeting);
+
+     //Allow the line item to be booked even if there is not enough inventory
+     lineItem.setAllowOverbook(true);
+
+     // Set the line item type to STANDARD and priority to Normal. In this case,
+     // 6 would be High, and 10 would be Low.
+     lineItem.setLineItemType(LineItemType.PRICE_PRIORITY);
+     lineItem.setPriority(8);
+     // Set the creative rotation type to even.
+     lineItem.setCreativeRotationType(CreativeRotationType.OPTIMIZED);
+     lineItem.setStatus(ComputedStatus.PAUSED);
+     // Create creative placeholder size.
+
+     CreativePlaceholder[] creativePlaceholder = new CreativePlaceholder[10];
+     creativePlaceholder[0] = createCreativeSizes(1, 1);
+     //Trying to set Creative Targeting here by giving the saved name which was created earlier
+     creativePlaceholder[0].setTargetingName("Test_KeyValue");
+     creativePlaceholder[1] = createCreativeSizes(160, 600);
+     //Trying to set Creative Targeting here by giving the saved name which was created earlier
+     creativePlaceholder[1].setTargetingName("Test_KeyValue");
+
+     //Set the size of creatives that can be associated with this line item
+     lineItem.setCreativePlaceholders(creativePlaceholder);
+     lineItem.setCreativeTargetings(creativeTargeting);
+
+     //set the length of time the line item to run
+     lineItem.setStartDateTimeType(StartDateTimeType.IMMEDIATELY);
+     lineItem.setUnlimitedEndDateTime(true);
+
+     //set the cost per unit to $0.10
+     lineItem.setCostType(CostType.CPM);
+     lineItem.setCostPerUnit(new Money("USD",price));
+
+     Goal goal = new Goal();
+     goal.setGoalType(GoalType.NONE);
+     //goal.setUnits(500000L);
+     goal.setUnitType(UnitType.IMPRESSIONS);
+     lineItem.setPrimaryGoal(goal);
+
+     lineItemsList[i] = lineItem;
+     price = price + increment;
+     displayPrice = displayPrice + incDisplay;
+     String str = String.format("%1.2f", displayPrice);
+     displayPrice = Double.valueOf(str);
+
+   }
+
+    // Create the line item on the server.
+    LineItem[] lineItems = lineItemService.createLineItems(lineItemsList);
+
+    for (LineItem createdLineItem : lineItems) {
+      System.out.printf("A line item with ID %d and name '%s' was created.%n",
+              createdLineItem.getId(), createdLineItem.getName());
+    }
+  }
+
+  private static CreativePlaceholder createCreativeSizes(int width, int height) {
+    Size size = new Size();
+    size.setWidth(width);
+    size.setHeight(height);
+    size.setIsAspectRatio(false);
+    CreativePlaceholder creativePlaceholder = new CreativePlaceholder();
+    creativePlaceholder.setSize(size);
+    return creativePlaceholder;
+  }
+
+  public static void main(String[] args) throws Exception {
+    // Generate a refreshable OAuth2 credential.
+    Credential oAuth2Credential = new OfflineCredentials.Builder()
+            .forApi(Api.DFP)
+            .fromFile()
+            .build()
+            .generateCredential();
+
+    // Construct a DfpSession.
+    DfpSession session = new DfpSession.Builder()
+            .fromFile()
+            .withOAuth2Credential(oAuth2Credential)
+            .build();
+
+    DfpServices dfpServices = new DfpServices();
+
+    CreateLineItemsParams params = new CreateLineItemsParams();
+    if (!params.parseArguments(args)) {
+      // Either pass the required parameters for this example on the command line, or insert them
+      // into the code here. See the parameter class definition above for descriptions.
+      params.orderId = Long.parseLong("ORDERID");
+    }
+
+    valuesList.add(VALUEIDL);//Value ID for the dynamic targeting
+
+    //Create line items
+    runExample(dfpServices, session, params.orderId, 1);
+
+  }
+}
